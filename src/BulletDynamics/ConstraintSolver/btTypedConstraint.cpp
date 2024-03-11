@@ -17,6 +17,8 @@ subject to the following restrictions:
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 #include "LinearMath/btSerializer.h"
 
+#include <cmath>
+
 #define DEFAULT_DEBUGDRAW_SIZE btScalar(0.05f)
 
 btTypedConstraint::btTypedConstraint(btTypedConstraintType type, btRigidBody& rbA)
@@ -98,6 +100,13 @@ btScalar btTypedConstraint::getMotorFactor(btScalar pos, btScalar lowLim, btScal
 		lim_fact = btScalar(0.0f);
 	}
 	return lim_fact;
+}
+
+void btTypedConstraint::internalSetAppliedImpulse(btScalar appliedImpulse) {
+	m_appliedImpulse = appliedImpulse;
+	if (m_breakingImpulseThreshold && m_constraintBrokenCallback && std::abs(appliedImpulse) >= m_breakingImpulseThreshold) {
+		m_constraintBrokenCallback(this);
+	}
 }
 
 ///fills the dataBuffer and returns the struct name (and 0 on failure)

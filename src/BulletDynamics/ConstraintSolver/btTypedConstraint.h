@@ -20,6 +20,8 @@ subject to the following restrictions:
 #include "btSolverConstraint.h"
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 
+#include <functional>
+
 #ifdef BT_USE_DOUBLE_PRECISION
 #define btTypedConstraintData2 btTypedConstraintDoubleData
 #define btTypedConstraintDataName "btTypedConstraintDoubleData"
@@ -54,6 +56,12 @@ enum btConstraintParams
 	BT_CONSTRAINT_STOP_CFM
 };
 
+/**
+ * Callback function invoked when applied impulse exceeds breaking impulse
+ * threshold. The broken constraint is passed as the argument.
+ */
+typedef std::function<void(btTypedConstraint*)> btConstraintBrokenCallback;
+
 #if 1
 #define btAssertConstrParams(_par) btAssert(_par)
 #else
@@ -81,7 +89,7 @@ btTypedConstraint : public btTypedObject
 		void* m_userConstraintPtr;
 	};
 
-	btScalar m_breakingImpulseThreshold;
+	btScalar m_breakingImpulseThreshold{0};
 	bool m_isEnabled;
 	bool m_needsFeedback;
 	int m_overrideNumSolverIterations;
@@ -99,6 +107,7 @@ protected:
 	btScalar m_appliedImpulse;
 	btScalar m_dbgDrawSize;
 	btJointFeedback* m_jointFeedback;
+	btConstraintBrokenCallback m_constraintBrokenCallback{nullptr};
 
 	///internal method used by the constraint solver, don't use them directly
 	btScalar getMotorFactor(btScalar pos, btScalar lowLim, btScalar uppLim, btScalar vel, btScalar timeFact);
@@ -109,6 +118,10 @@ public:
 	virtual ~btTypedConstraint(){};
 	btTypedConstraint(btTypedConstraintType type, btRigidBody & rbA);
 	btTypedConstraint(btTypedConstraintType type, btRigidBody & rbA, btRigidBody & rbB);
+
+	void setConstraintBrokenCallback(btConstraintBrokenCallback callback) {
+		m_constraintBrokenCallback = callback;
+	}
 
 	struct btConstraintInfo1
 	{
@@ -178,10 +191,8 @@ public:
 	virtual void getInfo2(btConstraintInfo2 * info) = 0;
 
 	///internal method used by the constraint solver, don't use them directly
-	void internalSetAppliedImpulse(btScalar appliedImpulse)
-	{
-		m_appliedImpulse = appliedImpulse;
-	}
+	void internalSetAppliedImpulse(btScalar appliedImpulse);
+
 	///internal method used by the constraint solver, don't use them directly
 	btScalar internalGetAppliedImpulse()
 	{
